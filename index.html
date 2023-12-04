@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Talkbot</title>
+    <style>
+        /* Your existing CSS styles */
+
+        body {
+            text-align: center;
+        }
+
+        .header {
+            background-color: lightgrey;
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+            padding: 10px;
+	    font-family: Times New Roman;
+	    font-size: 16px;
+	    border-bottom: 2px solid black;
+        }
+
+	.logos img {
+	    max-height: 75px;
+	}
+
+	.logos {
+	    display: flex;
+	    align-items: center;
+	}
+
+	.title {
+	    flex-grow:1;
+	    text-align:center;
+	    transform: translateX(-8%);
+	}
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .message {
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            max-width: 70%; /* Limit the width of the speech bubble */
+        }
+
+        .user-message {
+            background-color: red;
+	    border: 1px solid red;
+	    color: white;
+            align-self: flex-end;
+	    text-align:left;
+	    font-size: 20px;
+	    position: relative;
+        }
+
+
+        .bot-message {
+            background-color: lightgrey;
+	    color: white
+            align-self: flex-start;
+	    text-align: left;
+	    font-size: 20px;
+	    position:relative;
+        }
+
+	.bottom-container {
+	    display: flex;
+	
+	    margin-top: 10px;
+	}
+
+        .action-buttons {
+            margin-top: 8px;
+            display: flex;
+            justify-content: left;
+            gap: 10px;
+        }
+
+        .action-button {
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-size: 16px;
+            cursor: pointer;
+            color: black;
+	    background-color: #75FE54
+        }
+
+        .action-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .start-button {
+            background-color: #68FF33;
+        }
+
+	.stop-button {
+	    background-color: #FFE033
+
+        .stop-talking-button {
+            background-color: #FC0808;
+        }
+
+	.input-area {
+
+	}
+
+
+	.user-message-input {
+	    height:100px;
+	    width: 200px;
+	}
+
+	#send-button {
+	    margin-left: 30px;
+	    padding: 5px 10px;
+	    border: none;
+	    border-radius: 5px;
+	    font-size: 16px;
+	    background-color: #75FE54;
+	    color: white;
+	    cursor: pointer;
+	}
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+    <div class="header">
+	<div class="logos">
+		<div class="logo">
+			<img src="{{ url_for('static', filename='images/image1.png') }}">
+		</div>
+		<div class="logo">
+			<img src="{{ url_for('static', filename='images/image2.png') }}">
+		</div>
+        </div>
+        <h1 class="title">Talkbot</h1>
+    </div>
+    <div id="conversation" class="chat-container" style="height: 380px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+    <br>
+    <div class="bottom-container">
+    	<div class="action-buttons">
+        	<button id="start-btn" class="action-button" onclick="startListening()">Start Listening</button>
+        	<button id="stop-btn" class="action-button" onclick="stopListening()" disabled>Stop Listening</button>
+        	<button id="stop-talking-btn" class="action-button" onclick="stopTalking()" disabled>Stop Talking</button>
+    	</div>
+    	<div class="input-area">
+		<input type="text" id="user-message-input" style="width:500px; height:35px; font-size:16px; margin-left:250px" placeholder="Type your message here...">
+		<button id="send-btn" style="margin-left:8px"class="action-button" onclick="sendMessage()">Send</button>
+    	</div>
+    </div>
+
+    <script>
+
+        let conversationDiv = document.getElementById('conversation');
+        let startBtn = document.getElementById('start-btn');
+        let stopBtn = document.getElementById('stop-btn');
+        let stopTalkingBtn = document.getElementById('stop-talking-btn');
+        let recognition;
+        let synth;
+	let userMessageInput = document.getElementById('user-message-input');
+	let sendButton = document.getElementById('send-button');
+
+        function appendMessage(role, content) {
+            let messageDiv = document.createElement('div');
+	    let indicator = document.createElement('span');
+            
+
+	    if (role === 'You') {
+            messageDiv.className = 'user-message message';
+        } else if (role === 'Bot') {
+            messageDiv.className = 'bot-message message';
+        }
+
+	    messageDiv.appendChild(indicator);
+	    messageDiv.appendChild(document.createTextNode(content));
+
+            conversationDiv.appendChild(messageDiv);
+        }
+
+
+
+	async function sendToBot(userMessage) {
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+         
+
+                    try {
+                        const response = await fetch('/get_response', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 'user_message': userMessage }),
+                        });
+                        const data = await response.json();
+                        const botResponse = data.bot_response;
+                        console.log('Bot Response:', botResponse);
+                        updateConversation(userMessage, botResponse);
+                        speak(botResponse);
+                        stopTalkingBtn.disabled = false;
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                };
+
+	function sendMessage() {
+            const userMessage = userMessageInput.value.trim();
+
+            if (userMessage !== '') {
+	 	userMessageInput.value = '';
+		sendToBot(userMessage);
+		startBtn.disabled = false;
+	    }
+	}
+
+	userMessageInput.addEventListener('keyup', function(event) {
+		if(event.key === 'Enter') {
+			sendMessage();
+		}
+	});
+
+
+	function updateConversation(userMessage, botResponse) {
+            appendMessage('You', userMessage);
+            appendMessage('Bot', botResponse); 
+	    conversationDiv.scrollTop = conversationDiv.scrollHeight;
+	}
+
+
+        async function startListening() {
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false; // Only process the final result
+            recognition.interimResults = false; // Disable interim results
+
+            recognition.onresult = async (event) => {
+                const userMessage = event.results[0][0].transcript.trim();
+                console.log('User Message:', userMessage);
+                if (userMessage.toLowerCase() === 'stop') {
+                    stopListening();
+                } else {
+                    try {
+                        const response = await fetch('/get_response', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 'user_message': userMessage }),
+                        });
+                        const data = await response.json();
+                        const botResponse = data.bot_response;
+                        console.log('Bot Response:', botResponse);
+                        updateConversation(userMessage, botResponse);
+                        speak(botResponse);
+                        stopTalkingBtn.disabled = false;
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                stopListening();
+            };
+
+            recognition.onend = () => {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                stopTalkingBtn.disabled = true;
+            };
+
+            recognition.start();
+        }
+
+        function stopListening() {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            stopTalkingBtn.disabled = false;
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        function stopTalking() {
+            if (synth && synth.speaking) {
+                synth.cancel();
+                stopTalkingBtn.disabled = true;
+            }
+        }
+
+        async function speak(text) {
+            synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            utterance.voice = speechSynthesis.getVoices().find(voice => voice.name === 'en-US-JennyMultilingualNeural');
+
+            synth.onstart = () => {
+                stopTalkingBtn.disabled = false;
+            };
+
+            synth.onend = () => {
+                stopTalkingBtn.disabled = true;
+            };
+
+            synth.speak(utterance);
+        }
+    </script>
+</body>
+</html>
