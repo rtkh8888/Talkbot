@@ -7,3 +7,12 @@ You will need Azure OpenAI API.
 
 To start application locally:
 python server.py
+
+Place index file inside a folder named 'templates'
+
+
+
+
+
+![image](https://github.com/rtkh8888/Talkbot/assets/88766856/dc22a38e-ea6d-4237-866c-c939b8a30e79)
+
