@@ -1,4 +1,9 @@
 # Talkbot
 
+This is a talkbot that is able to take in speech and text input. 
+It will be able to answer questions and reply in both speech and text output
 
-ddddd
+You will need Azure OpenAI API. 
+
+To start application locally:
+python server.py
